@@ -9,10 +9,10 @@ struct Material
 };
 
 struct Light{
-    vec3 color;
+    vec3 directLight;
+    vec3 ambientLight;
     vec3 direction;
-//vec3 ambient color; -> set globally?
-    bool ambient;
+    bool ambient; //TODO: actually use those?
     bool diffuse;
     bool specular;
 };
@@ -26,15 +26,21 @@ struct Camera{
     vec3 position;
 };
 
+in vec3 tNormal;
+in vec3 tFragPos;
+
 out vec4 FragColor;
 
 uniform Material uMaterial;
 uniform vec3 uAmbientLightColor;
+uniform Surface uSurface;
+uniform Light uLightDayNight;
 
 void main(void)
 {
-    vec3 ambientLight = uMaterial.diffuse*uAmbientLightColor;
-    vec3 diffuseLight = uMaterial.diffuse;
-    vec3 specularLight = uMaterial.specular;
-    FragColor = vec4(ambientLight, 1.0);
+    vec3 ambientLight = uMaterial.diffuse * uLightDayNight.ambientLight;//TODO: use uMaterial.ambient?
+    vec3 diffuseLight = uMaterial.diffuse * uLightDayNight.directLight
+    * dot(normalize(tNormal), normalize(uLightDayNight.direction));
+    vec3 specularLight = uMaterial.specular; //TODO: specular light
+    FragColor = vec4(ambientLight+diffuseLight, 1.0);
 }
