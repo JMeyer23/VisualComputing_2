@@ -8,6 +8,11 @@
 #include "boat.h"
 #include "water.h"
 
+// Constants:
+Vector3D ambientLightDay = {0.5, 0.5, 0.5};
+Vector3D ambientLightNight = {0.2, 0.2, 0.3};
+Vector3D sky = {135.0 / 255, 206.0 / 255, 255.0 / 255};
+
 struct
 {
     Camera camera;
@@ -21,6 +26,9 @@ struct
     ShaderProgram shaderWater;
 
     WaterSim waterSim;
+
+    Vector3D ambientLight;
+
 } sScene;
 
 struct
@@ -31,8 +39,19 @@ struct
 } sInput;
 
 
+
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    /* input for light control */
+    if(key == GLFW_KEY_8 && action == GLFW_PRESS)
+    {
+        sScene.ambientLight = ambientLightDay;
+    }
+    if(key == GLFW_KEY_9 && action == GLFW_PRESS)
+    {
+        sScene.ambientLight = ambientLightNight;
+    }
     /* input for camera control */
     if(key == GLFW_KEY_0 && action == GLFW_PRESS)
     {
@@ -126,6 +145,10 @@ void sceneInit(float width, float height)
 
     sScene.shaderBoat = shaderLoad("shader/default.vert", "shader/color.frag");
     sScene.shaderWater = shaderLoad("shader/default.vert", "shader/color.frag");
+
+    // Light
+    sScene.ambientLight = ambientLightDay;
+
 }
 
 void sceneUpdate(float dt)
@@ -158,7 +181,11 @@ void render()
         for(auto& material : model.material)
         {
             /* set material properties */
+            shaderUniform(sScene.shaderBoat, "uMaterial.ambient", material.ambient);
             shaderUniform(sScene.shaderBoat, "uMaterial.diffuse", material.diffuse);
+            shaderUniform(sScene.shaderBoat, "uMaterial.specular", material.specular);
+            shaderUniform(sScene.shaderBoat, "uMaterial.shininess", material.shininess);
+            shaderUniform(sScene.shaderBoat, "uAmbientLightColor", sScene.ambientLight);
 
             glDrawElements(GL_TRIANGLES, material.indexCount, GL_UNSIGNED_INT, (const void*) (material.indexOffset*sizeof(unsigned int)) );
         }
@@ -174,7 +201,11 @@ void render()
         shaderUniform(sScene.shaderWater, "uModel", Matrix4D::identity());
 
         /* set material properties */
+        shaderUniform(sScene.shaderWater, "uMaterial.ambient", sScene.water.material.front().ambient);
         shaderUniform(sScene.shaderWater, "uMaterial.diffuse", sScene.water.material.front().diffuse);
+        shaderUniform(sScene.shaderWater, "uMaterial.specular", sScene.water.material.front().specular);
+        shaderUniform(sScene.shaderWater, "uMaterial.shininess", sScene.water.material.front().shininess);
+        shaderUniform(sScene.shaderWater, "uAmbientLightColor", sScene.ambientLight);
 
         glBindVertexArray(sScene.water.mesh.vao);
         glDrawElements(GL_TRIANGLES, sScene.water.material.front().indexCount, GL_UNSIGNED_INT, (const void*) (sScene.water.material.front().indexOffset*sizeof(unsigned int)) );
@@ -188,7 +219,7 @@ void render()
 
 void sceneDraw()
 {
-    glClearColor(135.0 / 255, 206.0 / 255, 235.0 / 255, 1.0);
+    glClearColor(sky.x * sScene.ambientLight.x, sky.y * sScene.ambientLight.y, sky.z * sScene.ambientLight.z, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /*------------ render scene -------------*/
