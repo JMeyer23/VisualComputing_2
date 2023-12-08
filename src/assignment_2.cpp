@@ -8,6 +8,30 @@
 #include "boat.h"
 #include "water.h"
 
+
+//Vector3D ambientLightSun = {0.5, 0.5, 0.5};
+//Vector3D ambientLightMoon = {0.1, 0.1, 0.2};
+//Vector3D directLightSun = {0.7,0.7,0.7};
+//Vector3D directLightMoon = {0.25,0.25,0.3};
+//Vector3D directionSun = {100,400,0};
+//Vector3D directionMoon = {-100,400,0};
+
+
+
+struct Light
+{
+    Vector3D directLight;
+    Vector3D ambientLight;
+    Vector3D direction;
+};
+
+// Constants:
+Light LIGHT_DAY{{0.9,0.9,0.9}, {0.8,0.8,0.8}, {100,300,0}};
+Light LIGHT_NIGHT{{0.25,0.25,0.3}, {0.1, 0.1, 0.2}, {-100,300,0}};
+Vector3D BACKGROUND_COLOR = {80.0 / 255, 160.0 / 255, 240.0 / 255};
+
+
+
 struct
 {
     Camera camera;
@@ -21,6 +45,9 @@ struct
     ShaderProgram shaderWater;
 
     WaterSim waterSim;
+
+    Light lightDayNight;
+
 } sScene;
 
 struct
@@ -31,8 +58,19 @@ struct
 } sInput;
 
 
+
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    /* input for light control */
+    if(key == GLFW_KEY_8 && action == GLFW_PRESS)
+    {
+        sScene.lightDayNight = LIGHT_DAY;
+    }
+    if(key == GLFW_KEY_9 && action == GLFW_PRESS)
+    {
+        sScene.lightDayNight = LIGHT_NIGHT;
+    }
     /* input for camera control */
     if(key == GLFW_KEY_0 && action == GLFW_PRESS)
     {
@@ -126,6 +164,10 @@ void sceneInit(float width, float height)
 
     sScene.shaderBoat = shaderLoad("shader/default.vert", "shader/color.frag");
     sScene.shaderWater = shaderLoad("shader/default.vert", "shader/color.frag");
+
+    // Light
+    sScene.lightDayNight = LIGHT_DAY;
+
 }
 
 void sceneUpdate(float dt)
@@ -158,7 +200,16 @@ void render()
         for(auto& material : model.material)
         {
             /* set material properties */
+            shaderUniform(sScene.shaderBoat, "uMaterial.ambient", material.ambient);
             shaderUniform(sScene.shaderBoat, "uMaterial.diffuse", material.diffuse);
+            shaderUniform(sScene.shaderBoat, "uMaterial.specular", material.specular);
+            shaderUniform(sScene.shaderBoat, "uMaterial.shininess", material.shininess);
+            shaderUniform(sScene.shaderBoat, "uLightDayNight.ambientLight", sScene.lightDayNight.ambientLight);
+            shaderUniform(sScene.shaderBoat, "uLightDayNight.directLight", sScene.lightDayNight.directLight);
+            shaderUniform(sScene.shaderBoat, "uLightDayNight.direction", sScene.lightDayNight.direction);
+            shaderUniform(sScene.shaderBoat, "uCamera.position", sScene.camera.position);
+
+
 
             glDrawElements(GL_TRIANGLES, material.indexCount, GL_UNSIGNED_INT, (const void*) (material.indexOffset*sizeof(unsigned int)) );
         }
@@ -174,7 +225,15 @@ void render()
         shaderUniform(sScene.shaderWater, "uModel", Matrix4D::identity());
 
         /* set material properties */
+        shaderUniform(sScene.shaderWater, "uMaterial.ambient", sScene.water.material.front().ambient);
         shaderUniform(sScene.shaderWater, "uMaterial.diffuse", sScene.water.material.front().diffuse);
+        shaderUniform(sScene.shaderWater, "uMaterial.specular", sScene.water.material.front().specular);
+        shaderUniform(sScene.shaderWater, "uMaterial.shininess", sScene.water.material.front().shininess);
+        shaderUniform(sScene.shaderWater, "uLightDayNight.ambientLight", sScene.lightDayNight.ambientLight);
+        shaderUniform(sScene.shaderWater, "uLightDayNight.directLight", sScene.lightDayNight.directLight);
+        shaderUniform(sScene.shaderWater, "uLightDayNight.direction", sScene.lightDayNight.direction);
+        shaderUniform(sScene.shaderWater, "uCamera.position", sScene.camera.position);
+
 
         glBindVertexArray(sScene.water.mesh.vao);
         glDrawElements(GL_TRIANGLES, sScene.water.material.front().indexCount, GL_UNSIGNED_INT, (const void*) (sScene.water.material.front().indexOffset*sizeof(unsigned int)) );
@@ -188,7 +247,7 @@ void render()
 
 void sceneDraw()
 {
-    glClearColor(135.0 / 255, 206.0 / 255, 235.0 / 255, 1.0);
+    glClearColor(BACKGROUND_COLOR.x * sScene.lightDayNight.ambientLight.x, BACKGROUND_COLOR.y * sScene.lightDayNight.ambientLight.y, BACKGROUND_COLOR.z * sScene.lightDayNight.ambientLight.z, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     /*------------ render scene -------------*/
