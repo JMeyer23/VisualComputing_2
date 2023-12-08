@@ -35,12 +35,25 @@ uniform Material uMaterial;
 uniform vec3 uAmbientLightColor;
 uniform Surface uSurface;
 uniform Light uLightDayNight;
+uniform Camera uCamera;
 
 void main(void)
 {
+    // normalize vectors
+    vec3 surfaceNormal = normalize(tNormal);
+    vec3 lightDayNightDirection = normalize(uLightDayNight.direction);
+    vec3 halfWayVector = normalize(uCamera.position+lightDayNightDirection);
+
     vec3 ambientLight = uMaterial.diffuse * uLightDayNight.ambientLight;//TODO: use uMaterial.ambient?
-    vec3 diffuseLight = uMaterial.diffuse * uLightDayNight.directLight
-    * dot(normalize(tNormal), normalize(uLightDayNight.direction));
-    vec3 specularLight = uMaterial.specular; //TODO: specular light
-    FragColor = vec4(ambientLight+diffuseLight, 1.0);
+    vec3 diffuseLight =
+        uMaterial.diffuse
+        * uLightDayNight.directLight
+        * dot(surfaceNormal, lightDayNightDirection);
+    vec3 specularLight =
+        uMaterial.specular
+        * uLightDayNight.directLight
+        * pow(dot(surfaceNormal, halfWayVector),uMaterial.shininess);
+
+
+    FragColor = vec4(ambientLight+diffuseLight+specularLight, 1.0);
 }

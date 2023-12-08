@@ -26,9 +26,9 @@ struct Light
 };
 
 // Constants:
-Light LIGHT_DAY{{0.7,0.7,0.7}, {0.5, 0.5, 0.5}, {100,300,0}};
+Light LIGHT_DAY{{0.9,0.9,0.9}, {0.8,0.8,0.8}, {100,300,0}};
 Light LIGHT_NIGHT{{0.25,0.25,0.3}, {0.1, 0.1, 0.2}, {-100,300,0}};
-Vector3D BACKGROUND_COLOR = {135.0 / 255, 206.0 / 255, 255.0 / 255};
+Vector3D BACKGROUND_COLOR = {80.0 / 255, 160.0 / 255, 240.0 / 255};
 
 
 
@@ -207,6 +207,7 @@ void render()
             shaderUniform(sScene.shaderBoat, "uLightDayNight.ambientLight", sScene.lightDayNight.ambientLight);
             shaderUniform(sScene.shaderBoat, "uLightDayNight.directLight", sScene.lightDayNight.directLight);
             shaderUniform(sScene.shaderBoat, "uLightDayNight.direction", sScene.lightDayNight.direction);
+            shaderUniform(sScene.shaderBoat, "uCamera.position", sScene.camera.position);
 
 
 
@@ -231,6 +232,7 @@ void render()
         shaderUniform(sScene.shaderWater, "uLightDayNight.ambientLight", sScene.lightDayNight.ambientLight);
         shaderUniform(sScene.shaderWater, "uLightDayNight.directLight", sScene.lightDayNight.directLight);
         shaderUniform(sScene.shaderWater, "uLightDayNight.direction", sScene.lightDayNight.direction);
+        shaderUniform(sScene.shaderWater, "uCamera.position", sScene.camera.position);
 
 
         glBindVertexArray(sScene.water.mesh.vao);
