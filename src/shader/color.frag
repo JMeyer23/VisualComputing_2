@@ -11,7 +11,7 @@ struct Material
 struct Light{
     vec3 directLight;
     vec3 ambientLight;
-    vec3 direction;
+    vec3 position;
     bool ambient; //TODO: actually use those?
     bool diffuse;
     bool specular;
@@ -32,28 +32,55 @@ in vec3 tFragPos;
 out vec4 FragColor;
 
 uniform Material uMaterial;
-uniform vec3 uAmbientLightColor;
 uniform Surface uSurface;
-uniform Light uLightDayNight;
 uniform Camera uCamera;
+
+// Light sources
+uniform Light uLightDayNight;
+uniform Light uSpotLights[4];
+
 
 void main(void)
 {
-    // normalize vectors
     vec3 surfaceNormal = normalize(tNormal);
-    vec3 lightDayNightDirection = normalize(uLightDayNight.direction);
-    vec3 halfWayVector = normalize(uCamera.position+lightDayNightDirection);
 
+
+    // Sun/Moon
     vec3 ambientLight = uMaterial.diffuse * uLightDayNight.ambientLight;//TODO: use uMaterial.ambient?
-    vec3 diffuseLight =
+
+    vec3 diffuseLightDayNight =
         uMaterial.diffuse
         * uLightDayNight.directLight
-        * dot(surfaceNormal, lightDayNightDirection);
-    vec3 specularLight =
+        * max(dot(surfaceNormal, normalize(uLightDayNight.position)),0.0);
+
+    vec3 specularLightDayNight =
         uMaterial.specular
         * uLightDayNight.directLight
-        * pow(dot(surfaceNormal, halfWayVector),uMaterial.shininess);
+        * pow(max(dot(surfaceNormal, normalize(uCamera.position+uLightDayNight.position)),0.0),uMaterial.shininess);
+
+    vec3 light = ambientLight + diffuseLightDayNight + specularLightDayNight;
 
 
-    FragColor = vec4(ambientLight+diffuseLight+specularLight, 1.0);
+    // Point Lights
+    for (int i=0; i<4; i++){
+        vec3 diffuseLight =
+        uMaterial.diffuse
+        * uSpotLights[i].directLight
+        * max(dot(surfaceNormal, normalize(uSpotLights[i].position-tFragPos)),0.0);
+        vec3 specularLight =
+        uMaterial.specular
+        * uSpotLights[i].directLight
+        * pow(max(dot(surfaceNormal, normalize(uCamera.position+uSpotLights[0].position-tFragPos)),0.0),uMaterial.shininess);
+
+        float distance = length(tFragPos - uSpotLights[i].position);
+        float attenuation = 1.0 / (1.0 + 0.5 * distance + 0.3 * distance * distance); //TODO: adjust
+
+        light += (diffuseLight+specularLight)*attenuation;
+    }
+
+    //TODO: correct water reflection?
+
+
+
+    FragColor = vec4(light, 1.0);
 }
