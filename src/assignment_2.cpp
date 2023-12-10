@@ -22,8 +22,8 @@ struct SpotLight {
 };
 
 // Saving these two is necessary for switching between day and night
-DayLight LIGHT_DAY{{0.9, 0.9, 0.9},
-                   {0.7, 0.7, 0.7},
+DayLight LIGHT_DAY{{1, 1, 1},
+                   {0.6, 0.6, 0.6},
                    {100, 300, 0}};
 DayLight LIGHT_NIGHT{{0.25, 0.25, 0.3},
                      {0.1,  0.1,  0.2},
