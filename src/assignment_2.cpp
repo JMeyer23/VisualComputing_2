@@ -9,34 +9,31 @@
 #include "water.h"
 
 
-
-struct Light {
+struct DayLight {
     Vector3D directLight;
     Vector3D ambientLight;
     Vector3D position;
 };
+struct SpotLight {
+    Vector3D directLight;
+    Vector3D position;
+    Vector3D direction;
+    float cutoffAngle = M_PI; //default to 180 degrees
+};
 
-// Constants:
-// These two are necessary for switching between day and night
-Light LIGHT_DAY{{0.9, 0.9, 0.9},
-                {0.7, 0.7, 0.7},
-                {100, 300, 0}};
-Light LIGHT_NIGHT{{0.25, 0.25, 0.3},
-                  {0.1,  0.1,  0.2},
-                  {-100, 300,  0}};
+// Saving these two is necessary for switching between day and night
+DayLight LIGHT_DAY{{0.9, 0.9, 0.9},
+                   {0.7, 0.7, 0.7},
+                   {100, 300, 0}};
+DayLight LIGHT_NIGHT{{0.25, 0.25, 0.3},
+                     {0.1,  0.1,  0.2},
+                     {-100, 300,  0}};
 
 // These are the basic positions to which rotation and translation will be applied
-Vector3D HEAD_LIGHT_LEFT_POSITION = {-1, 2, -0.2};
-Vector3D HEAD_LIGHT_RIGHT_POSITION = {1, 2, -0.2};
-Vector3D POSITION_LIGHT_LEFT_POSITION = {-1, 2, -2};
-Vector3D POSITION_LIGHT_RIGHT_POSITION = {1, 2, -2};
+// Spotlight array: 0=HeadLightLeft, 1=HeadLightRight, 2=PositionLightLeft, 3=PositionLightRight
+const Vector3D SPOT_LIGHT_POSITIONS[4] = {{-1, 2, -0.2}, {1, 2, -0.2}, {-1, 2, -2}, {1, 2, -2}};
+const Vector3D SPOT_LIGHT_DIRECTIONS[4] = {{-1, 0, 20},{1, 0, 20},{-20, 2, -2},{20, 2, -2}};
 
-// The following are only used in scene init, and would not need to be constants, but this way all light
-// configuration is at one place
-Light HEAD_LIGHT_LEFT = {{1,1,1},{0,0,0},HEAD_LIGHT_LEFT_POSITION};
-Light HEAD_LIGHT_RIGHT = {{1,1,1},{0,0,0},HEAD_LIGHT_RIGHT_POSITION};
-Light POSITION_LIGHT_LEFT = {{1,0,0},{0,0,0},POSITION_LIGHT_LEFT_POSITION};
-Light POSITION_LIGHT_RIGHT = {{0,1,0},{0,0,0},POSITION_LIGHT_RIGHT_POSITION};
 
 Vector3D BACKGROUND_COLOR = {80.0 / 255, 160.0 / 255, 240.0 / 255};
 
@@ -54,11 +51,8 @@ struct {
 
     WaterSim waterSim;
 
-    Light lightDayNight;
-    Light headLightLeft;
-    Light headLightRight;
-    Light positionLightLeft;
-    Light positionLightRight;
+    DayLight lightDayNight;
+    SpotLight spotLights[4];
 
 } sScene;
 
@@ -68,6 +62,12 @@ struct {
     bool keyPressed[Boat::eControl::CONTROL_COUNT] = {false, false, false, false};
 } sInput;
 
+void updateLights() {
+    for (int i=0;i<4;i++){
+        sScene.spotLights[i].position=sScene.boat.transformation * Vector4D(SPOT_LIGHT_POSITIONS[i]);
+        sScene.spotLights[i].direction=sScene.boat.transformation * Vector4D(SPOT_LIGHT_DIRECTIONS[i]);
+    }
+}
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     /* input for light control */
@@ -157,10 +157,10 @@ void sceneInit(float width, float height) {
 
     // Light
     sScene.lightDayNight = LIGHT_DAY;
-    sScene.headLightLeft = HEAD_LIGHT_LEFT;
-    sScene.headLightRight = HEAD_LIGHT_RIGHT;
-    sScene.positionLightLeft = POSITION_LIGHT_LEFT;
-    sScene.positionLightRight = POSITION_LIGHT_RIGHT;
+    sScene.spotLights[0] = {{1, 1, 1}, SPOT_LIGHT_POSITIONS[0], SPOT_LIGHT_DIRECTIONS[0], 1.3};
+    sScene.spotLights[1] = {{1, 1, 1}, SPOT_LIGHT_POSITIONS[1], SPOT_LIGHT_DIRECTIONS[1], 1.3};
+    sScene.spotLights[2] = {{1, 0, 0}, SPOT_LIGHT_POSITIONS[2], SPOT_LIGHT_DIRECTIONS[2]};
+    sScene.spotLights[3] = {{0, 1, 0}, SPOT_LIGHT_POSITIONS[3], SPOT_LIGHT_DIRECTIONS[3]};
 }
 
 void sceneUpdate(float dt) {
@@ -168,10 +168,7 @@ void sceneUpdate(float dt) {
 
     boatMove(sScene.boat, sScene.waterSim, sInput.keyPressed, dt);
 
-    sScene.headLightLeft.position = sScene.boat.transformation * Vector4D(HEAD_LIGHT_LEFT_POSITION);
-    sScene.headLightRight.position = sScene.boat.transformation * Vector4D(HEAD_LIGHT_RIGHT_POSITION);
-    sScene.positionLightLeft.position = sScene.boat.transformation * Vector4D(POSITION_LIGHT_LEFT_POSITION);
-    sScene.positionLightRight.position = sScene.boat.transformation * Vector4D(POSITION_LIGHT_RIGHT_POSITION);
+    updateLights();
 
     if (!sScene.cameraFollowBoat)
         cameraFollow(sScene.camera, sScene.boat.position);
@@ -204,14 +201,13 @@ void render() {
             shaderUniform(sScene.shaderBoat, "uLightDayNight.ambientLight", sScene.lightDayNight.ambientLight);
             shaderUniform(sScene.shaderBoat, "uLightDayNight.position", sScene.lightDayNight.position);
 
-            shaderUniform(sScene.shaderBoat, "uSpotLights[0].directLight", sScene.headLightLeft.directLight);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[0].position", sScene.headLightLeft.position);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[1].directLight", sScene.headLightRight.directLight);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[1].position", sScene.headLightRight.position);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[2].directLight", sScene.positionLightLeft.directLight);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[2].position", sScene.positionLightLeft.position);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[3].directLight", sScene.positionLightRight.directLight);
-            shaderUniform(sScene.shaderBoat, "uSpotLights[3].position", sScene.positionLightRight.position);
+            for(int u=0;u<4;u++){
+                shaderUniform(sScene.shaderBoat, "uSpotLights["+std::to_string(u)+"].directLight", sScene.spotLights[u].directLight);
+                shaderUniform(sScene.shaderBoat, "uSpotLights["+std::to_string(u)+"].position", sScene.spotLights[u].position);
+                shaderUniform(sScene.shaderBoat, "uSpotLights["+std::to_string(u)+"].direction", sScene.spotLights[u].direction);
+                shaderUniform(sScene.shaderBoat, "uSpotLights["+std::to_string(u)+"].cutoffAngle", sScene.spotLights[u].cutoffAngle);
+            }
+
 
 
             glDrawElements(GL_TRIANGLES, material.indexCount, GL_UNSIGNED_INT,
@@ -239,14 +235,12 @@ void render() {
         shaderUniform(sScene.shaderWater, "uLightDayNight.directLight", sScene.lightDayNight.directLight);
         shaderUniform(sScene.shaderWater, "uLightDayNight.position", sScene.lightDayNight.position);
 
-        shaderUniform(sScene.shaderWater, "uSpotLights[0].directLight", sScene.headLightLeft.directLight);
-        shaderUniform(sScene.shaderWater, "uSpotLights[0].position", sScene.headLightLeft.position);
-        shaderUniform(sScene.shaderWater, "uSpotLights[1].directLight", sScene.headLightRight.directLight);
-        shaderUniform(sScene.shaderWater, "uSpotLights[1].position", sScene.headLightRight.position);
-        shaderUniform(sScene.shaderWater, "uSpotLights[2].directLight", sScene.positionLightLeft.directLight);
-        shaderUniform(sScene.shaderWater, "uSpotLights[2].position", sScene.positionLightLeft.position);
-        shaderUniform(sScene.shaderWater, "uSpotLights[3].directLight", sScene.positionLightRight.directLight);
-        shaderUniform(sScene.shaderWater, "uSpotLights[3].position", sScene.positionLightRight.position);
+        for(int u=0;u<4;u++){
+            shaderUniform(sScene.shaderWater, "uSpotLights["+std::to_string(u)+"].directLight", sScene.spotLights[u].directLight);
+            shaderUniform(sScene.shaderWater, "uSpotLights["+std::to_string(u)+"].position", sScene.spotLights[u].position);
+            shaderUniform(sScene.shaderWater, "uSpotLights["+std::to_string(u)+"].direction", sScene.spotLights[u].direction);
+            shaderUniform(sScene.shaderWater, "uSpotLights["+std::to_string(u)+"].cutoffAngle", sScene.spotLights[u].cutoffAngle);
+        }
 
         glBindVertexArray(sScene.water.mesh.vao);
         glDrawElements(GL_TRIANGLES, sScene.water.material.front().indexCount, GL_UNSIGNED_INT,
