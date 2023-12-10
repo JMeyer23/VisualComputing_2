@@ -8,13 +8,17 @@ struct Material
     float shininess;
 };
 
-struct Light{
+struct dayLight{
     vec3 directLight;
     vec3 ambientLight;
     vec3 position;
-    bool ambient; //TODO: actually use those?
-    bool diffuse;
-    bool specular;
+};
+
+struct spotLight{
+    vec3 directLight;
+    vec3 position;
+    vec3 direction;
+    float cutoffAngle;
 };
 
 struct Surface{
@@ -36,8 +40,8 @@ uniform Surface uSurface;
 uniform Camera uCamera;
 
 // Light sources
-uniform Light uLightDayNight;
-uniform Light uSpotLights[4];
+uniform dayLight uLightDayNight;
+uniform spotLight uSpotLights[4];
 
 
 void main(void)
@@ -63,23 +67,31 @@ void main(void)
 
     // Point Lights
     for (int i=0; i<4; i++){
-        vec3 diffuseLight =
-        uMaterial.diffuse
-        * uSpotLights[i].directLight
-        * max(dot(surfaceNormal, normalize(uSpotLights[i].position-tFragPos)),0.0);
-        vec3 specularLight =
-        uMaterial.specular
-        * uSpotLights[i].directLight
-        * pow(max(dot(surfaceNormal, normalize(uCamera.position+uSpotLights[0].position-tFragPos)),0.0),uMaterial.shininess);
 
-        float distance = length(tFragPos - uSpotLights[i].position);
-        float attenuation = 1.0 / (1.0 + 0.5 * distance + 0.3 * distance * distance); //TODO: adjust
+        vec3 lightDir = normalize(uSpotLights[i].position - tFragPos);
+        // Cosine of the angle between the direction of the spotlight and the direction of the light to the fragment
+        float cosTheta = dot(-lightDir, normalize(uSpotLights[i].direction));
 
-        light += (diffuseLight+specularLight)*attenuation;
+        // Check if the fragment is within the spotlight cone (cos is smaller for higher angles!)
+        if (cosTheta > cos(uSpotLights[i].cutoffAngle)) {
+
+            vec3 diffuseLight =
+            uMaterial.diffuse
+            * uSpotLights[i].directLight
+            * max(dot(surfaceNormal, normalize(uSpotLights[i].position-tFragPos)),0.0);
+
+            vec3 viewDir = normalize(uCamera.position - tFragPos);
+            vec3 reflectDir = reflect(-lightDir, surfaceNormal);
+            float specularFactor = pow(max(dot(viewDir, reflectDir), 0.0), uMaterial.shininess);
+            vec3 specularLight = uMaterial.specular * uSpotLights[i].directLight * specularFactor;
+
+            float distance = length(tFragPos - uSpotLights[i].position);
+            float attenuation = 1.0 / (1.0 + 0.2 * distance + 0.1 * distance * distance);
+
+            light += (diffuseLight+specularLight)*attenuation;
+        }
+
     }
-
-    //TODO: correct water reflection?
-
 
 
     FragColor = vec4(light, 1.0);
