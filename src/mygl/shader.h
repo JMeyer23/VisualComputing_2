@@ -1,6 +1,9 @@
 #pragma once
 
+
+#include <iostream>
 #include "base.h"
+#include "water.h"
 
 struct ShaderProgram
 {
@@ -89,3 +92,16 @@ void shaderUniform(ShaderProgram& shader, const std::string& name, int value);
  * @param value Value to which the uniform should be set.
  */
 void shaderUniform(ShaderProgram& shader, const std::string& name, float value);
+
+inline void shaderUniform(ShaderProgram& shader, const std::string& name, const WaveParams& value)
+{
+    int location = glGetUniformLocation(shader.id, name.c_str());
+    if (location != -1)
+    {
+        glUniform4f(location, value.amplitude, value.phi, value.omega, 0.0); // Assuming you're using vec4 for WaveParams
+    }
+    else
+    {
+        std::cout << "Warning: Uniform " << name << " not found!" << std::endl;
+    }
+}
