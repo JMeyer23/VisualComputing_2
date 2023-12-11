@@ -1,9 +1,14 @@
-#version 330 core
+#version 330
+
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
 uniform float uTime;// Time variable
+
+uniform vec4 wave1Params;
+uniform vec4 wave2Params;
+uniform vec4 wave3Params;
 
 in vec3 aPosition;// Original vertex position
 
@@ -11,55 +16,43 @@ out vec3 FragPos;// Output for fragment shader -----
 out vec3 Normal;// Output for fragment shader -----
 
 // Function to calculate the height of the water surface at a given point
-float calculateWaterHeight(vec3 position, float time)
+float calculateWaterHeight(vec3 position, float time, vec4 waveParams)
 {
-    float sumHeight = 0.0;
+    float amplitude = waveParams[0];
+    float phase = waveParams[1];
+    float wavelength = waveParams[2];
 
-    // Wave 1
-    float amplitude1 = 0.6f;
-    float angularFrequency1 = 0.5f;
-    float phase1 = 0.25f;
-    vec2 direction1 = normalize(vec2(1.0f, 1.0f));
-    sumHeight += amplitude1 * sin(angularFrequency1 * dot(position.xz, direction1) + time * phase1);
+    float waveHeight = amplitude * sin(wavelength* dot(position, vec3(1.0, 0.0, 1.0)) + time + phase);
 
-    // Wave 2
-    float amplitude2 = 0.7f;
-    float angularFrequency2 = 0.25f;
-    float phase2 = 0.1f;
-    vec2 direction2 = normalize(vec2(1.0f, -1.0f));
-    sumHeight += amplitude2 * sin(angularFrequency2 * dot(position.xz, direction2) + time * phase2);
+    return waveHeight;
 
-    // Wave 3
-    float amplitude3 = 0.1f;
-    float angularFrequency3 = 0.9f;
-    float phase3 = 0.9f;
-    vec2 direction3 = normalize(vec2(-1.0f, 0.0f));
-    sumHeight += amplitude3 * sin(angularFrequency3 * dot(position.xz, direction3) + time * phase3);
-
-    return sumHeight;
 }
+
 
 void main()
 {
     vec3 displacedPosition = aPosition;
 
     // Calculate the height of the water surface at the current vertex position
-    float waterHeight = calculateWaterHeight(aPosition, uTime);
+    float waterHeight1 = calculateWaterHeight(aPosition, uTime, wave1Params);
+    float waterHeight2 = calculateWaterHeight(aPosition, uTime, wave2Params);
+    float waterHeight3 = calculateWaterHeight(aPosition, uTime, wave3Params);
+
+
+    // Sum the heights of all waves
+    float waterHeight = waterHeight1 + waterHeight2 + waterHeight3;
 
     // Displace the vertex position in the y-axis based on the water height
     displacedPosition.y += waterHeight;
 
+    // Compute the surface normal
+    float epsilon = 0.1;// Small value for numerical stability
+    float dx = calculateWaterHeight(aPosition + vec3(epsilon, 0.0, 0.0), uTime, wave1Params) - waterHeight;
+    float dy = calculateWaterHeight(aPosition + vec3(0.0, 0.0, epsilon), uTime, wave1Params) - waterHeight;
+    vec3 normal = normalize(vec3(-dx, 0.0, -dy));
 
-    // Calculate the normal of the water surface at the current vertex position
-    float heightX = calculateWaterHeight(aPosition + vec3(0.01, 0, 0), uTime);
-    float heightY = calculateWaterHeight(aPosition + vec3(0, 0.01, 0), uTime);
-    vec3 normal = normalize(vec3(-1, 0, -heightX) * vec3(0, -1, -heightY));
-
-    // Pass the vertex position and normal to the Fragment Shader
     FragPos = displacedPosition;
     Normal = normal;
 
-    // Transform the vertex position to clip coordinates
     gl_Position = uProj * uView * uModel * vec4(displacedPosition, 1.0);
-
 }
