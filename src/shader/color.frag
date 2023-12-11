@@ -50,7 +50,7 @@ void main(void)
 
 
     // Sun/Moon
-    vec3 ambientLight = uMaterial.diffuse * uLightDayNight.ambientLight;//TODO: use uMaterial.ambient?
+    vec3 ambientLight = uMaterial.diffuse * uLightDayNight.ambientLight;
 
     vec3 diffuseLightDayNight =
         uMaterial.diffuse
