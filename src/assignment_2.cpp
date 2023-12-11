@@ -163,6 +163,7 @@ void sceneInit(float width, float height) {
     sScene.spotLights[3] = {{0, 1, 0}, SPOT_LIGHT_POSITIONS[3], SPOT_LIGHT_DIRECTIONS[3]};
 }
 
+
 void sceneUpdate(float dt) {
     sScene.waterSim.accumTime += dt;
 
