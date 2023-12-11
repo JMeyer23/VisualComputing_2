@@ -12,8 +12,8 @@ uniform vec4 wave3Params;
 
 in vec3 aPosition;// Original vertex position
 
-out vec3 FragPos;// Output for fragment shader -----
-out vec3 Normal;// Output for fragment shader -----
+out vec3 tFragPos;// Output for fragment shader -----
+out vec3 tNormal;// Output for fragment shader -----
 
 // Function to calculate the height of the water surface at a given point
 float calculateWaterHeight(vec3 position, float time, vec4 waveParams)
@@ -51,8 +51,8 @@ void main()
     float dy = calculateWaterHeight(aPosition + vec3(0.0, 0.0, epsilon), uTime, wave1Params) - waterHeight;
     vec3 normal = normalize(vec3(-dx, 0.0, -dy));
 
-    FragPos = displacedPosition;
-    Normal = normal;
+    tFragPos = displacedPosition;
+    tNormal = normal;
 
     gl_Position = uProj * uView * uModel * vec4(displacedPosition, 1.0);
 }
