@@ -64,8 +64,9 @@ struct {
 
 void updateLights() {
     for (int i=0;i<4;i++){
-        sScene.spotLights[i].position=sScene.boat.transformation * Vector4D(SPOT_LIGHT_POSITIONS[i]);
-        sScene.spotLights[i].direction=sScene.boat.transformation * Vector4D(SPOT_LIGHT_DIRECTIONS[i]);
+        sScene.spotLights[i].position=sScene.boat.transformation * Vector4D(SPOT_LIGHT_POSITIONS[i],1);
+        // dont apply translation to spotlight direction (4th column of transformation vector)
+        sScene.spotLights[i].direction=sScene.boat.transformation * Vector4D(SPOT_LIGHT_DIRECTIONS[i],0);
     }
 }
 
